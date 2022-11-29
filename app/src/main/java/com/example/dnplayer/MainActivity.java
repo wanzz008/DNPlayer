@@ -36,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPrepare() {
                 System.out.println("------MainActivity接到回调:onPrepare");
+                myPlayer.start();
             }
 
             @Override

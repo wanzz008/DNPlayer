@@ -25,16 +25,23 @@ public:
 
     int start();
 
+    void setRenderFrameCallback(RenderFrameCallback callback);
+
+    void _play();
 
 private:
     char *path ;
     pthread_t pId;
+    pthread_t pid_play;
+
     AVFormatContext *context ;
 
     AudioChannel *audioChannel ;
     VideoChannel *videoChannel ;
     JavaCallHelper *callHelper ;
+    bool isPlaying; // 是否在播放
 
+    RenderFrameCallback callback; //回调
 };
 
 

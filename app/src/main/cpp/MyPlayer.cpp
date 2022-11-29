@@ -14,7 +14,7 @@ MyPlayer::MyPlayer(const char *path_, JavaCallHelper *callHelper) {
 //    this->path = path_;
     this->callHelper = callHelper;
 
-    this->path = new char[strlen(path_)];
+    this->path = new char[strlen(path_) + 1];
 //    //防止 dataSource参数 指向的内存被释放
     strcpy(this->path,path_);
 
@@ -23,6 +23,7 @@ MyPlayer::MyPlayer(const char *path_, JavaCallHelper *callHelper) {
 MyPlayer::~MyPlayer() {
     delete path;
     path = 0;
+    delete callHelper ;
 }
 
 void *prepare_task(void *args) {
@@ -34,7 +35,9 @@ void *prepare_task(void *args) {
 void MyPlayer::prepare() {
     pthread_create(&pId, 0, prepare_task, this);
 }
-
+/**
+ * 准备工作： 解封装
+ */
 void MyPlayer::_prepare() {
     avformat_network_init();
     //1、打开媒体地址(文件地址、直播地址)
@@ -91,9 +94,12 @@ void MyPlayer::_prepare() {
             callHelper->onError(THREAD_CHILD,FFMPEG_OPEN_DECODER_FAIL);
         }
         if (parameters->codec_type == AVMEDIA_TYPE_AUDIO) {
-            audioChannel = new AudioChannel();
-        } else if (parameters->codec_type == AVMEDIA_TYPE_AUDIO) {
-            videoChannel = new VideoChannel();
+            audioChannel = new AudioChannel(i, avCodecContext);
+            LOGE("audioChannel音频轨道---------");
+        } else if (parameters->codec_type == AVMEDIA_TYPE_VIDEO) {
+            videoChannel = new VideoChannel(i, avCodecContext);
+            videoChannel->setRenderFrameCallback(callback);
+            LOGE("videoChannel视频轨道---------");
         }
 
     }
@@ -110,10 +116,62 @@ void MyPlayer::_prepare() {
 
 }
 
-int MyPlayer::start() {
+void *play(void *args) {
+    MyPlayer *player = static_cast<MyPlayer *>(args);
+    player->_play();
     return 0;
 }
 
+/**
+ * 解码
+ * @return
+ */
+int MyPlayer::start() {
+    isPlaying = 1 ;
+
+    if (videoChannel){
+        LOGE("start..... videoChannel不为空");
+        videoChannel->play();
+    } else{
+        LOGE("start..... videoChannel为空");
+    }
+    // 读取数据，填充avpacket队列
+    pthread_create(&pid_play,0,play,this);
+
+
+    return 0;
+}
+
+/**
+ * 专门读取数据包
+ */
+void MyPlayer::_play() {
+    LOGE("_play 读取avpacket数据并送进队列.....");
+    //1、读取媒体数据包(音视频数据包)
+    int ret ;
+    while (isPlaying){
+        AVPacket *packet = av_packet_alloc();
+        ret = av_read_frame(context,packet);
+        if (ret == 0){
+            if (audioChannel && packet->stream_index == audioChannel->channelId){
+//                LOGE("_play.....audioChannel----向队列输送avpacket");
+            } else if(videoChannel && packet->stream_index == videoChannel->channelId){
+//                LOGE("_play.....videoChannel----向队列输送avpacket");
+                videoChannel->packets.push(packet);
+            }
+        }else if (ret == AVERROR_EOF) {
+            //读取完成 但是可能还没播放完
+
+        } else {
+            //
+        }
+    }
+}
+
+
+void MyPlayer::setRenderFrameCallback(RenderFrameCallback callback) {
+    this->callback = callback ;
+}
 
 
 

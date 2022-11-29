@@ -1,5 +1,6 @@
 package com.example.dnplayer;
 
+import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
@@ -29,6 +30,7 @@ public class MyPlayer implements SurfaceHolder.Callback {
      * 开始播放
      */
     public void start(){
+        System.out.println("------start....");
         nativeStart();
     }
 
@@ -72,7 +74,7 @@ public class MyPlayer implements SurfaceHolder.Callback {
 
     @Override
     public void surfaceChanged(@NonNull SurfaceHolder surfaceHolder, int i, int i1, int i2) {
-
+        nativeSetSurface(holder.getSurface());
     }
 
     @Override
@@ -94,4 +96,5 @@ public class MyPlayer implements SurfaceHolder.Callback {
 
     private native void nativePrepare(String dataSource);
     private native void nativeStart();
+    private native void nativeSetSurface(Surface surface);
 }

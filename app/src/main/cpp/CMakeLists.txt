@@ -12,7 +12,6 @@ project("dnplayer")
 #使用CMakeLists.txt同样可以指定so库的输出路径,但一定要在add_library之前设置，否则不会生效:
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
         ${PROJECT_SOURCE_DIR}/../libs/${ANDROID_ABI}) #指定路径
-#生成的so库在和CMakeLists.txt同级目录下的libs文件夹下
 #如果只是在自己的项目中使用，CMake的方式在打包APK的时候会自动将cpp文件编译成so文件拷贝进去。如果要提供给外部使用时，Make Project，之后在libs目录下就可以看到生成的对应配置的相关CPU平台的.so文件。
 
 
@@ -35,7 +34,8 @@ find_library( # Sets the name of the path variable.
         log)
 
 include_directories(include)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${CMAKE_SOURCE_DIR}/libs/${ANDROID_ABI}")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -L${CMAKE_SOURCE_DIR}/libs/${ANDROID_ABI}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D__STDC_CONSTANT_MACROS -L${CMAKE_SOURCE_DIR}/libs/${ANDROID_ABI}")
 
 
 target_link_libraries( # Specifies the target library.
@@ -45,4 +45,5 @@ target_link_libraries( # Specifies the target library.
         # included in the NDK.
         avformat avcodec avfilter    avutil swresample swscale
         z
+        android
         ${log-lib})
