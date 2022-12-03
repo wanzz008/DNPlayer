@@ -31,7 +31,6 @@ private:
     pthread_t pid_render;
 
     SwsContext *swsContext=0;
-    SafeQueue<AVFrame *> frames;
 
     RenderFrameCallback callback ;
 

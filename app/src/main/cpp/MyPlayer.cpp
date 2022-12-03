@@ -16,14 +16,14 @@ MyPlayer::MyPlayer(const char *path_, JavaCallHelper *callHelper) {
 
     this->path = new char[strlen(path_) + 1];
 //    //防止 dataSource参数 指向的内存被释放
-    strcpy(this->path,path_);
+    strcpy(this->path, path_);
 
 }
 
 MyPlayer::~MyPlayer() {
     delete path;
     path = 0;
-    delete callHelper ;
+    delete callHelper;
 }
 
 void *prepare_task(void *args) {
@@ -35,6 +35,7 @@ void *prepare_task(void *args) {
 void MyPlayer::prepare() {
     pthread_create(&pId, 0, prepare_task, this);
 }
+
 /**
  * 准备工作： 解封装
  */
@@ -42,16 +43,16 @@ void MyPlayer::_prepare() {
     avformat_network_init();
     //1、打开媒体地址(文件地址、直播地址)
     int ret = avformat_open_input(&context, path, 0, 0);
-    LOGE("打开媒体地址为: %s",path);
+    LOGE("打开媒体地址为: %s", path);
     if (ret != 0) {
-        LOGE("打开媒体失败:%s",av_err2str(ret));
+        LOGE("打开媒体失败:%s", av_err2str(ret));
         callHelper->onError(THREAD_CHILD, FFMPEG_CAN_NOT_OPEN_URL);
         return;
     }
     //2、查找媒体中的 音视频流 (给 contxt里的 streams等成员赋)
     ret = avformat_find_stream_info(context, 0);
     if (ret < 0) {
-        LOGE("查找流失败:%s",av_err2str(ret));
+        LOGE("查找流失败:%s", av_err2str(ret));
         callHelper->onError(THREAD_CHILD, FFMPEG_CAN_NOT_FIND_STREAMS);
         return;
     }
@@ -90,8 +91,8 @@ void MyPlayer::_prepare() {
         // 4、打开解码器
         ret = avcodec_open2(avCodecContext, codec, 0);
         if (ret != 0) {
-            LOGE("打开解码器失败:%s",av_err2str(ret));
-            callHelper->onError(THREAD_CHILD,FFMPEG_OPEN_DECODER_FAIL);
+            LOGE("打开解码器失败:%s", av_err2str(ret));
+            callHelper->onError(THREAD_CHILD, FFMPEG_OPEN_DECODER_FAIL);
         }
         if (parameters->codec_type == AVMEDIA_TYPE_AUDIO) {
             audioChannel = new AudioChannel(i, avCodecContext);
@@ -107,7 +108,7 @@ void MyPlayer::_prepare() {
     //没有音视频  (很少见)
     if (!audioChannel && !videoChannel) {
         LOGE("没有音视频");
-        callHelper->onError(THREAD_CHILD,FFMPEG_NOMEDIA);
+        callHelper->onError(THREAD_CHILD, FFMPEG_NOMEDIA);
         return;
     }
 
@@ -127,16 +128,18 @@ void *play(void *args) {
  * @return
  */
 int MyPlayer::start() {
-    isPlaying = 1 ;
+    isPlaying = 1;
 
-    if (videoChannel){
+    if (videoChannel) {
         LOGE("start..... videoChannel不为空");
         videoChannel->play();
-    } else{
-        LOGE("start..... videoChannel为空");
+    }
+    if (audioChannel){
+        LOGE("start..... audioChannel不为空");
+        audioChannel->play();
     }
     // 读取数据，填充avpacket队列
-    pthread_create(&pid_play,0,play,this);
+    pthread_create(&pid_play, 0, play, this);
 
 
     return 0;
@@ -148,18 +151,19 @@ int MyPlayer::start() {
 void MyPlayer::_play() {
     LOGE("_play 读取avpacket数据并送进队列.....");
     //1、读取媒体数据包(音视频数据包)
-    int ret ;
-    while (isPlaying){
+    int ret;
+    while (isPlaying) {
         AVPacket *packet = av_packet_alloc();
-        ret = av_read_frame(context,packet);
-        if (ret == 0){
-            if (audioChannel && packet->stream_index == audioChannel->channelId){
+        ret = av_read_frame(context, packet);
+        if (ret == 0) {
+            if (audioChannel && packet->stream_index == audioChannel->channelId) {
 //                LOGE("_play.....audioChannel----向队列输送avpacket");
-            } else if(videoChannel && packet->stream_index == videoChannel->channelId){
+                audioChannel->packets.push(packet);
+            } else if (videoChannel && packet->stream_index == videoChannel->channelId) {
 //                LOGE("_play.....videoChannel----向队列输送avpacket");
                 videoChannel->packets.push(packet);
             }
-        }else if (ret == AVERROR_EOF) {
+        } else if (ret == AVERROR_EOF) {
             //读取完成 但是可能还没播放完
 
         } else {
@@ -170,7 +174,7 @@ void MyPlayer::_play() {
 
 
 void MyPlayer::setRenderFrameCallback(RenderFrameCallback callback) {
-    this->callback = callback ;
+    this->callback = callback;
 }
 
 

@@ -3,7 +3,6 @@
 //
 
 #include "VideoChannel.h"
-#include "macro.h"
 
 extern "C"{
 #include <libavutil/imgutils.h>

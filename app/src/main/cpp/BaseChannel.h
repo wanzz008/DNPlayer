@@ -6,6 +6,7 @@
 #define DNPLAYER_BASECHANNEL_H
 
 #include "safe_queue.h"
+#include "macro.h"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -53,7 +54,11 @@ public:
 
     int channelId ;
     bool isPlaying;
+    //编码数据包队列
     SafeQueue<AVPacket *> packets;
+    //解码数据包队列
+    SafeQueue<AVFrame *> frames;
+
     AVCodecContext *avCodecContext;
 };
 

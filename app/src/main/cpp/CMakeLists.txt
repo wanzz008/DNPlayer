@@ -45,5 +45,5 @@ target_link_libraries( # Specifies the target library.
         # included in the NDK.
         avformat avcodec avfilter    avutil swresample swscale
         z
-        android
+        android OpenSLES
         ${log-lib})

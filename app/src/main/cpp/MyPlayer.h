@@ -34,10 +34,10 @@ private:
     pthread_t pId;
     pthread_t pid_play;
 
-    AVFormatContext *context ;
+    AVFormatContext *context = 0 ;
 
-    AudioChannel *audioChannel ;
-    VideoChannel *videoChannel ;
+    AudioChannel *audioChannel = 0;
+    VideoChannel *videoChannel = 0;
     JavaCallHelper *callHelper ;
     bool isPlaying; // 是否在播放
 
