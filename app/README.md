@@ -51,7 +51,42 @@ https://blog.csdn.net/weixin_49406295/article/details/121483625
     4.停止解码，释放资源。
 
 2： 播放线程
-
     1.初始化播放链表； 
     2.启动初始化OPenSL ES线程，该线程主要是完成对OpenSL ES引擎的初始化，待初始化完毕后，会结束掉该线程。因为，OpenSL ES播放音频是通过回调函数的方式实现的，只需要循环读取PCM数据的线程即可； 
     3.循环读取PCM链表，并将读取的数据存储到播放链表中。
+
+
+==================================
+音视频同步：
+
+视频流里拿到帧率：
+    AVRational avRational = stream->avg_frame_rate;
+    int fps = av_q2d(avRational);
+
+
+1. 音频里
+   // 音频：获得相对于播放这一段数据的秒数
+   double audio_clock = frame->pts * av_q2d(time_base);
+2. 视频里
+  //每个画面 刷新的间隔 单位：秒
+   double frame_delays = 1.0 / fps;
+   //获得 当前这一个画面 播放的相对的时间
+   double video_clock = frame->best_effort_timestamp * av_q2d(time_base);
+   //额外的间隔时间
+   double extra_delay = frame->repeat_pict / (2 * fps);
+   // 真实需要间隔的时间
+   double delay = frame_delays + extra_delay ;
+
+
+通过比较audio_clock和video_clock，播放时相差的间隔，选择进行视频帧的延时播放或者丢包操作
+
+
+
+packet.flags 是ibp的什么帧
+
+-D定义一个预编译宏
+-U取消一个预编译宏
+
+
+
+

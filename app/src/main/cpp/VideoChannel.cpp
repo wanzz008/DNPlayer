@@ -4,12 +4,48 @@
 
 #include "VideoChannel.h"
 
-extern "C"{
+extern "C" {
 #include <libavutil/imgutils.h>
+#include "libavutil/time.h"
 }
 
-VideoChannel::VideoChannel(int id, AVCodecContext *pContext) : BaseChannel(id, pContext) {
+
+/**
+ * 丢包 直到下一个关键帧
+ * @param q
+ */
+
+void dropAvPacket(queue<AVPacket *> &q) {
+    while (!q.empty()) {
+        AVPacket *packet = q.front();
+        //如果不属于 I 帧
+        if (packet->flags != AV_PKT_FLAG_KEY) {
+            BaseChannel::releaseAvPacket(&packet);
+            q.pop();
+        } else {
+            break;
+        }
+    }
+}
+
+/**
+ * 丢已经解码的图片
+ * @param q
+ */
+void dropAvFrame(queue<AVFrame *> &q){
+    if (!q.empty()){
+        AVFrame *frame = q.front();
+        BaseChannel::releaseAvFrame(&frame);
+        q.pop();
+    }
+}
+
+
+VideoChannel::VideoChannel(int id, AVCodecContext *pContext, int fps, AVRational time_base)
+        : BaseChannel(id, pContext, time_base) {
     frames.setReleaseCallback(releaseAvFrame);
+    this->fps = fps;
+    frames.setSyncHandle(dropAvFrame);
 }
 
 VideoChannel::~VideoChannel() {
@@ -43,6 +79,7 @@ void VideoChannel::play() {
     pthread_create(&pid_render,0,render_task, this);
 
 }
+
 /**
  * 解码，从队列取出avpacket，进行解码成avframe，再送进一个队列
  */
@@ -82,6 +119,7 @@ void VideoChannel::decode() {
     }
     releaseAvPacket(&packet);
 }
+
 /**
  * 渲染， 从队列取出解码后的avframe，格式转换后，进行渲染
  */
@@ -98,6 +136,10 @@ void VideoChannel::render() {
             SWS_BILINEAR,0,0,0
                                 );
     AVFrame* frame = 0;
+
+    //每个画面 刷新的间隔 单位：秒
+    double frame_delays = 1.0 / fps;
+
     //指针数组
     uint8_t *dst_data[4];
     int dst_linesize[4];
@@ -114,6 +156,46 @@ void VideoChannel::render() {
                   avCodecContext->height,
                   dst_data,
                   dst_linesize);
+#if 1
+        //获得 当前这一个画面 播放的相对的时间
+        double video_clock = frame->best_effort_timestamp * av_q2d(time_base);
+        //额外的间隔时间
+        double extra_delay = frame->repeat_pict / (2 * fps);
+        // 真实需要间隔的时间
+        double delay = frame_delays + extra_delay ;
+
+        if (!audioChannel){
+            av_usleep(delay * 1000000);
+        } else {
+            if (video_clock == 0){
+                av_usleep(delay * 1000000);
+            } else{
+                // 比较音频和视频
+                double  audio_clock = audioChannel->audio_clock;
+                // 音视频相差的间隔
+                double diff = video_clock - audio_clock ;
+                if (diff > 0){
+                    // 大于0表示视频快了
+                    LOGE("视频快了：%lf",diff);
+                    av_usleep((delay + diff) * 1000000);
+                } else if(diff < 0){
+                    //小于0 表示音频比较快
+                    LOGE("音频快了：%lf",diff);
+                    // 视频包积压的太多了 （丢包）
+                    if (fabs(diff) >= 0.05){
+                        releaseAvFrame(&frame);
+                        //会执行dropAvFrame(queue<AVFrame *> &q)方法进行丢包
+                        frames.sync();
+                        continue;
+                    } else {
+                        // 不睡了 让视频尽快赶上音频
+                    }
+                }
+            }
+        }
+
+
+#endif
         //回调出去进行播放
         callback(dst_data[0],dst_linesize[0],avCodecContext->width, avCodecContext->height);
         releaseAvFrame(&frame) ;
@@ -125,6 +207,10 @@ void VideoChannel::render() {
 
 void VideoChannel::setRenderFrameCallback(RenderFrameCallback callback) {
     this->callback = callback ;
+}
+
+void VideoChannel::setAudioChannel(AudioChannel *audioChannel) {
+    this->audioChannel = audioChannel ;
 }
 
 

@@ -7,6 +7,8 @@
 
 
 #include "BaseChannel.h"
+#include "AudioChannel.h"
+
 extern "C"{
 #include "libswscale/swscale.h"
 }
@@ -15,7 +17,7 @@ typedef void (*RenderFrameCallback)(uint8_t *,int,int,int);
 
 class VideoChannel : public BaseChannel{
 public:
-    VideoChannel(int id, AVCodecContext *pContext);
+    VideoChannel(int id, AVCodecContext *pContext, int fps, AVRational rational);
     ~VideoChannel();
 
     void play();
@@ -26,6 +28,8 @@ public:
 
     void setRenderFrameCallback(RenderFrameCallback callback);
 
+    void setAudioChannel(AudioChannel *audioChannel);
+
 private:
     pthread_t pid_decode;
     pthread_t pid_render;
@@ -34,6 +38,9 @@ private:
 
     RenderFrameCallback callback ;
 
+    int fps; //帧率
+
+    AudioChannel *audioChannel = 0;
 };
 
 

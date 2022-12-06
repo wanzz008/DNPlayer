@@ -94,11 +94,15 @@ void MyPlayer::_prepare() {
             LOGE("打开解码器失败:%s", av_err2str(ret));
             callHelper->onError(THREAD_CHILD, FFMPEG_OPEN_DECODER_FAIL);
         }
+
+        AVRational time_base = stream->time_base ;
         if (parameters->codec_type == AVMEDIA_TYPE_AUDIO) {
-            audioChannel = new AudioChannel(i, avCodecContext);
+            audioChannel = new AudioChannel(i, avCodecContext, time_base);
             LOGE("audioChannel音频轨道---------");
         } else if (parameters->codec_type == AVMEDIA_TYPE_VIDEO) {
-            videoChannel = new VideoChannel(i, avCodecContext);
+            AVRational avRational = stream->avg_frame_rate;
+            int fps = av_q2d(avRational);
+            videoChannel = new VideoChannel(i, avCodecContext, fps, time_base);
             videoChannel->setRenderFrameCallback(callback);
             LOGE("videoChannel视频轨道---------");
         }
@@ -132,6 +136,7 @@ int MyPlayer::start() {
 
     if (videoChannel) {
         LOGE("start..... videoChannel不为空");
+        videoChannel->setAudioChannel(audioChannel);
         videoChannel->play();
     }
     if (audioChannel){

@@ -14,7 +14,8 @@ extern "C" {
 
 class BaseChannel {
 public:
-    BaseChannel(int id, AVCodecContext *pContext) : channelId(id),avCodecContext(pContext){
+    BaseChannel(int id, AVCodecContext *pContext, AVRational time_base) : channelId(id),avCodecContext(pContext),
+                                                                          time_base(time_base){
         packets.setReleaseCallback(releaseAvPacket);
     }
 
@@ -60,6 +61,10 @@ public:
     SafeQueue<AVFrame *> frames;
 
     AVCodecContext *avCodecContext;
+
+    AVRational time_base ;
+
+    double audio_clock;
 };
 
 

@@ -4,7 +4,7 @@
 
 #include "AudioChannel.h"
 
-AudioChannel::AudioChannel(int id, AVCodecContext *pContext) : BaseChannel(id, pContext) {
+AudioChannel::AudioChannel(int id, AVCodecContext *pContext, AVRational time_base) : BaseChannel(id, pContext,time_base) {
     out_channels = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
     out_samplesize = av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
     out_sample_rate = 44100;
@@ -113,6 +113,8 @@ int AudioChannel::getPcm() {
     int samples = swr_convert(swrContext, &data, max_samples, (const uint8_t **)frame->data, frame->nb_samples);
     //获得   samples 个   * 2 声道 * 2字节（16位）
     data_size =  samples * out_samplesize * out_channels ;
+    // 音频：获得相对于播放这一段数据的秒数
+    audio_clock = frame->pts * av_q2d(time_base);
     return data_size;
 }
 
