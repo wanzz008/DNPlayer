@@ -123,7 +123,7 @@ void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context) {
     AudioChannel *audioChannel = static_cast<AudioChannel *>(context);
     //获得pcm 数据 多少个字节 data
     int dataSize = audioChannel->getPcm();
-    LOGE("AudioChannel: bqPlayerCallback.....");
+//    LOGE("AudioChannel: bqPlayerCallback.....");
     if(dataSize > 0 ){
         // 接收16位数据
         //取完数据，需要调用Enqueue触发下一次数据回调

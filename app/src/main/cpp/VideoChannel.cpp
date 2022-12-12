@@ -46,10 +46,16 @@ VideoChannel::VideoChannel(int id, AVCodecContext *pContext, int fps, AVRational
     frames.setReleaseCallback(releaseAvFrame);
     this->fps = fps;
     frames.setSyncHandle(dropAvFrame);
+
+//    pthread_mutex_init(&mutex, NULL);
+//    pthread_cond_init(&cond, NULL);
+
 }
 
 VideoChannel::~VideoChannel() {
     frames.clear();
+//    pthread_cond_destroy(&cond);
+//    pthread_mutex_destroy(&mutex);
 }
 
 void* decode_task(void *args){
@@ -150,7 +156,7 @@ void VideoChannel::render() {
         if (!isPlaying){
             break;
         }
-        //src_linesize: 表示每一行存放的 字节长度
+        //转换为rgb格式  src_linesize: 表示每一行存放的 字节长度
         sws_scale(swsContext, reinterpret_cast<const uint8_t *const *>(frame->data),
                   frame->linesize, 0,
                   avCodecContext->height,
@@ -176,11 +182,11 @@ void VideoChannel::render() {
                 double diff = video_clock - audio_clock ;
                 if (diff > 0){
                     // 大于0表示视频快了
-                    LOGE("视频快了：%lf",diff);
+//                    LOGE("视频快了：%lf",diff);
                     av_usleep((delay + diff) * 1000000);
                 } else if(diff < 0){
                     //小于0 表示音频比较快
-                    LOGE("音频快了：%lf",diff);
+//                    LOGE("音频快了：%lf",diff);
                     // 视频包积压的太多了 （丢包）
                     if (fabs(diff) >= 0.05){
                         releaseAvFrame(&frame);

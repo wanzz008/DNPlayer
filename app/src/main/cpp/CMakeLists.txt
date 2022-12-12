@@ -46,4 +46,6 @@ target_link_libraries( # Specifies the target library.
         avformat avcodec avfilter    avutil swresample swscale
         z
         android OpenSLES
+        GLESv3
+        EGL
         ${log-lib})
